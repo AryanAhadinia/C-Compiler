@@ -3,7 +3,7 @@ from pathlib import Path
 from anytree import RenderTree
 
 from lexer import Lexer
-from parser import Parser, get_grammar
+from parser_ import Parser, get_grammar
 
 
 def main():
