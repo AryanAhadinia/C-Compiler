@@ -31,6 +31,8 @@ class CodeGenerator:
         self.program_line += 1
 
     def action_routine(self, action, id, num):
+        if action[0] == "#":
+            action = action[1:]
         if action == "get_temp":
             self.get_temp()
         elif action == "p_id":
@@ -51,6 +53,14 @@ class CodeGenerator:
             self.eq()
         elif action == "lt":
             self.lt()
+        elif action == "declare_var":
+            self.declare_var()
+        elif action == "declare_array":
+            self.declare_array()
+        elif action == "compare":
+            self.compare()
+        else:
+            raise Exception("Invalid action")
 
     def get_temp(self, len=1, size=4):
         address = self.temp_pointer
@@ -96,13 +106,26 @@ class CodeGenerator:
     def lt(self):
         self.semantic_stack.append("LT")
 
-    def declare_var(self, var):
+    def declare_var(self):
+        var = self.semantic_stack.pop()
         address = self.get_temp()
         self.scope_stack[self.current_scope][var] = address
         self.add_code_line(("ASSIGN", "#0", address, None))
+        self.semantic_stack.append(address)
 
-    def declare_array(self, var, len):
+    def declare_array(self):
+        len = int(self.semantic_stack.pop()[1:])
+        var = self.semantic_stack.pop()
         address = self.get_temp(len=len)
         self.scope_stack[self.current_scope][var] = address
         for i in range(len):
             self.add_code_line(("ASSIGN", "#0", address + i * 4, None))
+        self.semantic_stack.append(address)
+
+    def compare(self):
+        right = self.semantic_stack.pop()
+        op = self.semantic_stack.pop()
+        left = self.semantic_stack.pop()
+        result = self.get_temp()
+        self.add_code_line((op, left, right, result))
+        self.semantic_stack.append(result)
