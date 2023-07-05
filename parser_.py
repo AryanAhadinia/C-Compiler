@@ -6,6 +6,7 @@ from typing import List, Dict, Set
 from anytree import Node, RenderTree
 
 from lexer import Lexer, Token, TokenType
+from code_gen import CodeGenerator
 
 EPSILON = "EPSILON"
 
@@ -29,6 +30,7 @@ class Grammar(object):
         start_symbol: str,
         terminals: List[str],
         non_terminals: List[str],
+        actions: List[str],
         firsts: Dict[str, Set[str]],
         follows: Dict[str, Set[str]],
     ):
@@ -36,6 +38,7 @@ class Grammar(object):
         self.start_symbol = start_symbol
         self.terminals = terminals
         self.non_terminals = non_terminals
+        self.actions = actions
         self.firsts = firsts
         self.follows = follows
 
@@ -49,12 +52,18 @@ class Grammar(object):
 
     def get_terminals(self):
         return self.terminals
+    
+    def get_actions(self):
+        return self.actions
 
     def is_non_terminal(self, symbol):
         return symbol in self.get_non_terminals()
 
     def is_terminal(self, symbol):
         return symbol in self.get_terminals()
+    
+    def is_action(self, symbol):
+        return symbol in self.get_actions()
 
     def is_epsilon(self, symbol):
         return symbol == EPSILON
@@ -69,10 +78,13 @@ class Grammar(object):
 
     def get_follow(self, symbol):
         return self.follows[symbol]
+    
+    def filter_actions(self, rhs):
+        return [symbol for symbol in rhs if not self.is_action(symbol)]
 
     def entry_tokens_for_rhs(self, lhs: str, rhs: List[str]):
         entry_tokens = set([EPSILON])
-        for symbol in rhs:
+        for symbol in self.filter_actions(rhs):
             entry_tokens.remove(EPSILON)
             first = self.get_first(symbol)
             entry_tokens.update(first)
@@ -171,16 +183,20 @@ def compile_productions():
     return productions, productions[0].lhs
 
 
-def get_terminals_and_non_terminals(productions):
+def get_terminals_and_non_terminals_and_actions(productions):
     non_terminals = {production.lhs for production in productions}
     terminals = set()
+    actions = set()
     for production in productions:
         for rhs in production.rhs:
             for symbol in rhs:
                 if symbol not in non_terminals:
-                    terminals.add(symbol)
+                    if symbol.startswith("#"):
+                        actions.add(symbol)
+                    else:
+                        terminals.add(symbol)
     terminals.add("$")
-    return terminals, non_terminals
+    return terminals, non_terminals, actions
 
 
 def get_firsts():
@@ -213,10 +229,10 @@ def get_follows():
 
 def get_grammar():
     productions, start_symbol = compile_productions()
-    terminals, non_terminals = get_terminals_and_non_terminals(productions)
+    terminals, non_terminals, actions = get_terminals_and_non_terminals_and_actions(productions)
     firsts = get_firsts()
     follows = get_follows()
-    return Grammar(productions, start_symbol, terminals, non_terminals, firsts, follows)
+    return Grammar(productions, start_symbol, terminals, non_terminals, actions, firsts, follows)
 
 
 class Parser(object):
@@ -224,6 +240,7 @@ class Parser(object):
         self.grammar = get_grammar()
         self.lexer = lexer
         self.errors = []
+        self.code_generator = CodeGenerator(self, lexer)
 
     def parse(self):
         self.lexer.get_next_token()
@@ -266,10 +283,13 @@ class Parser(object):
                         return ParseTreeEpsilonNode(parsing_symbol), False
                     children = []
                     for symbol in rhs:
-                        sub_root, eof = self.parse_node(symbol, depth + 1)
-                        children.append(sub_root)
-                        if eof:
-                            break
+                        if self.grammar.is_action(symbol):
+                            self.code_generator.code_gen(symbol)
+                        else:
+                            sub_root, eof = self.parse_node(symbol, depth + 1)
+                            children.append(sub_root)
+                            if eof:
+                                break
                     return ParseTreeInternalNode(parsing_symbol, children), eof
             if token.value in self.grammar.get_follow(parsing_symbol):
                 error = ParseTreeSyntaxErrorNode(
