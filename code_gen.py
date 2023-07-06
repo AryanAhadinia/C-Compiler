@@ -78,6 +78,8 @@ class CodeGenerator:
             self.jpf_save()
         elif action == "output":
             self.output()
+        elif action == "call_index":
+            self.call_index()
         else:
             raise Exception("Invalid action")
 
@@ -166,6 +168,14 @@ class CodeGenerator:
         condition = self.semantic_stack.pop()
         self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
         self.save()
+
+    def call_index(self):
+        index = self.semantic_stack.pop()
+        array = self.semantic_stack.pop()
+        result = self.get_temp()
+        self.add_code_line(("MULT", index, "#4", result))
+        self.add_code_line(("ADD", array, result, result))
+        self.semantic_stack.append("@" + str(result))
 
     def output(self):
         self.add_code_line(("PRINT", self.semantic_stack.pop(), None, None))
