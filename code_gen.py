@@ -4,7 +4,7 @@ class CodeGenerator:
         self.lexer = lexer
 
         self.semantic_stack = list()
-        self.scope_stack = [dict()]
+        self.scope_stack = [{'output': 0}]
         self.codes_generated = dict()
 
         self.program_line = 2
@@ -31,11 +31,11 @@ class CodeGenerator:
         return address
 
     def add_code_line(self, code):
-        self.codes_generated[self.program_line] = code
+        self.codes_generated[int(self.program_line)] = code
         self.program_line += 1
 
     def store_code_line(self, code, line):
-        self.codes_generated[line] = code
+        self.codes_generated[int(line)] = code
 
     def code_gen(self, action):
         if action[0] == "#":
@@ -80,6 +80,8 @@ class CodeGenerator:
             self.output()
         elif action == "call_index":
             self.call_index()
+        elif action == "exp_end":
+            self.exp_end()
         else:
             raise Exception("Invalid action")
 
@@ -129,15 +131,17 @@ class CodeGenerator:
     def declare_var(self):
         address = self.semantic_stack.pop()
         self.add_code_line(("ASSIGN", "#0", address, None))
-        # self.semantic_stack.append(address)
+        
+        self.semantic_stack.append(address)
 
     def declare_array(self):
         length = int(self.semantic_stack.pop()[1:])
         address = self.semantic_stack.pop()
         self.get_temp(len=(length - 1))
-        for i in range(length - 1):
-            self.add_code_line(("ASSIGN", "#0", int(address) + i * 4, None))
-        # self.semantic_stack.append(address)
+        self.add_code_line(("ASSIGN", "#0", address, None))
+        # for i in range(length - 1):
+        #     self.add_code_line(("ASSIGN", "#0", int(address) + i * 4, None))
+        self.semantic_stack.append(address)
 
     def compare(self):
         right = self.semantic_stack.pop()
@@ -168,19 +172,29 @@ class CodeGenerator:
         condition = self.semantic_stack.pop()
         self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
         self.save()
+    
 
     def call_index(self):
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
         result = self.get_temp()
         self.add_code_line(("MULT", index, "#4", result))
-        self.add_code_line(("ADD", array, result, result))
+        self.add_code_line(("ADD", f'#{array}', result, result))
         self.semantic_stack.append("@" + str(result))
-
+    
+    def exp_end(self):
+        self.semantic_stack.pop()
+        
+    
     def output(self):
-        self.add_code_line(("PRINT", self.semantic_stack.pop(), None, None))
+        value = self.semantic_stack.pop()
+        self.add_code_line(("PRINT", value, None, None))
+        self.semantic_stack.pop()
+        self.semantic_stack.append(value)
+
 
     def to_code_string(self, path):
+        self.codes_generated = dict(sorted(self.codes_generated.items()))
         with open(path, "w") as f:
             for i, code_line in self.codes_generated.items():
                 output = f"{i}\t("
