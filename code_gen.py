@@ -49,6 +49,9 @@ class CodeGenerator:
         self.codes_generated[0] = ("ASSIGN", "#4", 0, None)
         self.codes_generated[1] = ("JP", 2, None, None)
         self.temp_pointer += 4
+        self.current_func = None
+        self.current_function_arg_checking_index = 0
+        self.in_loop = False
 
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
@@ -68,6 +71,9 @@ class CodeGenerator:
         self.program_line += 1
 
     def store_code_line(self, code, line):
+        if isinstance(line, str):
+            if line.startswith("#"):
+                line = line[1:]
         self.codes_generated[int(line)] = code
 
     def code_gen(self, action):
@@ -134,12 +140,12 @@ class CodeGenerator:
             self.add_int_param()
         elif action == "add_array_param":
             self.add_array_param()
-        elif action == "get_arg":
-            self.get_arg()
         elif action == "add_func_name":
             self.add_func_name()
-        elif action == "check_args":
-            self.check_args()
+        elif action == "loop_start":
+            self.loop_start()
+        elif action == "loop_end":
+            self.loop_end()
         elif action == "func_call_args_start":
             pass
         elif action == "func_call_args_end":
@@ -271,6 +277,11 @@ class CodeGenerator:
         # if len(self.break_stack) == 0:
         #     self.semantic_errors.append(SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno))
         #     return
+        if self.in_loop == False:
+            self.semantic_errors.append(
+                SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno)
+            )
+            return
         self.break_stack.append((self.break_scope[-1], self.program_line))
         self.program_line += 1
 
@@ -320,54 +331,6 @@ class CodeGenerator:
         self.funcs.append(self.last_id)
         self.funcs_args[self.last_id] = []
 
-    def get_arg_type(self, arg_id):
-        for scope in reversed(self.scope_stack):
-            if arg_id in scope:
-                return scope[arg_id]["type"]
-        self.semantic_errors.append(
-            SemanticErrorMessage.SCOPING.value.format(self.lexer.lineno, arg_id)
-        )
-
-    def get_arg(self):
-        print(self.lexer.lineno)
-        print(self.scope_stack)
-        print(self.funcs_args)
-        print(self.funcs)
-        arg_type = self.get_arg_type(self.last_id)
-        self.funcs_args[self.funcs[-1]].append(arg_type)
-
-    def check_args(self):
-        print(self.lexer.lineno)
-        print(self.funcs_args)
-        print(self.funcs)
-        print(self.scope_stack[self.current_scope][self.funcs[-1]]["params"])
-        if len(self.current_func_args) != len(
-            self.scope_stack[self.current_scope][self.current_func]["params"]
-        ):
-            self.semantic_errors.append(
-                SemanticErrorMessage.FORMAL_PARAMS_NUM_MATCHING.value.format(
-                    self.lexer.lineno, self.current_func
-                )
-            )
-            return
-        for i, arg in enumerate(self.current_func_args):
-            if (
-                arg
-                != self.scope_stack[self.current_scope][self.current_func]["params"][i][
-                    "type"
-                ]
-            ):
-                self.semantic_errors.append(
-                    SemanticErrorMessage.FORMAL_PARAM_TYPE_MATCHING.value.format(
-                        self.lexer.lineno,
-                        i + 1,
-                        self.scope_stack[self.current_scope][self.current_func][
-                            "params"
-                        ][i]["type"],
-                        arg,
-                    )
-                )
-
     def func_call_args_start(self):
         function_name = "fgaa"
         self.current_func = function_name
@@ -384,6 +347,12 @@ class CodeGenerator:
         # if index out of bound
         # top of stack type
         self.current_function_arg_checking_index += 1
+
+    def loop_start(self):
+        self.in_loop = True
+
+    def loop_end(self):
+        self.in_loop = False
 
     def output(self):
         value = self.semantic_stack.pop()
