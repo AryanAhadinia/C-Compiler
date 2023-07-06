@@ -53,6 +53,8 @@ class CodeGenerator:
         self.current_function_arg_checking_index = 0
         self.in_loop = False
 
+        self.address_type_mapping = {} # TODO: default
+
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
             if var in scope:
@@ -60,8 +62,7 @@ class CodeGenerator:
         return -1, None
 
     def add_var_to_scope(self, var, scope_indicator):
-        address = self.temp_pointer
-        self.temp_pointer += 4
+        address = self.get_temp()
         self.scope_stack[scope_indicator][var] = dict()
         self.scope_stack[scope_indicator][var]["addr"] = address
         return address
@@ -158,7 +159,22 @@ class CodeGenerator:
     def get_temp(self, len=1, size=4):
         address = self.temp_pointer
         self.temp_pointer += len * size
+        if len == 1:
+            self.address_type_mapping[address] = "int"
+        else:
+            for i in range(1, len):
+                self.address_type_mapping[address + i * size] = "int"
+            self.address_type_mapping[address - size] = "array"
         return address
+    
+    def get_type(self, address):
+        address = str(address)
+        if address.startswith("#"):
+            pass
+        elif address.startswith("@"):
+            pass
+        else:
+            pass
 
     def p_id(self, id):
         scope, address = self.get_var_scope(id)
@@ -223,7 +239,7 @@ class CodeGenerator:
     def declare_array(self):
         length = int(self.semantic_stack.pop()[1:])
         address = self.semantic_stack.pop()
-        self.get_temp(len=(length - 1))
+        self.get_temp(len=length)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
         self.scope_stack[self.current_scope][self.last_id] = dict()
