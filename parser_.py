@@ -262,6 +262,8 @@ class Parser(object):
                     self.code_generator.last_id = token.value
                 if token.type == TokenType.NUM:
                     self.code_generator.last_num = token.value
+                if token.type == TokenType.KEYWORD and token.value in ['int', 'void']:
+                    self.code_generator.last_type = token.value
                 self.lexer.get_next_token()
                 return ParseTreeLeafNode(parsing_symbol, token), False
             else:
@@ -317,6 +319,9 @@ class Parser(object):
                         SyntaxErrorType.IllegalSymbol,
                     )
                 )
+                if token.type == TokenType.KEYWORD and token.value == "break":
+                    self.code_generator.code_gen("break_error")
+                    print('Hiiiiii')
                 self.lexer.get_next_token()
                 sub_root, eof = self.parse_node(parsing_symbol, depth)
                 return sub_root, eof

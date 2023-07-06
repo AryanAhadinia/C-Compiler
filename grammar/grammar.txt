@@ -2,14 +2,14 @@ Program ⟶ Declaration-list
 Declaration-list ⟶ Declaration Declaration-list | EPSILON
 Declaration ⟶ Declaration-initial Declaration-prime
 Declaration-initial ⟶ Type-specifier ID #p_id
-Declaration-prime ⟶ Fun-declaration-prime | Var-declaration-prime
+Declaration-prime ⟶ #declare_func_start Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime ⟶ ; #declare_var | [ NUM #p_num ] #declare_array ;
-Fun-declaration-prime ⟶ ( Params ) Compound-stmt
+Fun-declaration-prime ⟶ ( Params ) Compound-stmt #declare_func_end
 Type-specifier ⟶ int | void
 Params ⟶ int ID #p_id Param-prime Param-list | void
 Param-list ⟶ , Param Param-list | EPSILON
 Param ⟶ Declaration-initial Param-prime
-Param-prime ⟶ [ ] | EPSILON
+Param-prime ⟶ [ ] #add_array_param | #add_int_param EPSILON
 Compound-stmt ⟶ { #scope_enter Declaration-list Statement-list #scope_exit }
 Statement-list ⟶ Statement Statement-list | EPSILON
 Statement ⟶ Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
@@ -35,10 +35,10 @@ Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
 Factor ⟶ ( Expression ) | ID #p_id Var-call-prime | NUM #p_num
-Var-call-prime ⟶ ( Args ) #output | Var-prime
+Var-call-prime ⟶ #add_func_name ( Args ) #output | Var-prime
 Var-prime ⟶ [ Expression #call_index ] | EPSILON
-Factor-prime ⟶ ( Args ) #output | EPSILON
+Factor-prime ⟶ ( Args ) #check_args #output | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
-Arg-list ⟶ Expression Arg-list-prime
-Arg-list-prime ⟶ , Expression Arg-list-prime | EPSILON
+Arg-list ⟶ Expression #get_arg Arg-list-prime
+Arg-list-prime ⟶ , Expression #get_arg Arg-list-prime | EPSILON

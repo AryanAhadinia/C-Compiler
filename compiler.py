@@ -14,16 +14,15 @@ def main():
     parser = Parser(lexer)
     parse_tree, errors = parser.parse()
     parser.code_generator.to_code_string('output.txt')
-    with open("semantic_errors.txt", "w") as f:
-        f.write('The input program is semantically correct.\n')
-    # with open("parse_tree.txt", "w") as f:
-    #     f.write(RenderTree(parse_tree.to_anytree()).by_attr())
-    # with open("syntax_errors.txt", "w") as f:
-    #     if len(errors) == 0:
-    #         f.write(f"There is no syntax error.")
-    #     else:
-    #         for error in errors:
-    #             f.write(f"{error}\n")
+    parser.code_generator.to_semantic_errors('semantic_errors.txt')
+    with open("parse_tree.txt", "w") as f:
+        f.write(RenderTree(parse_tree.to_anytree()).by_attr())
+    with open("syntax_errors.txt", "w") as f:
+        if len(errors) == 0:
+            f.write(f"There is no syntax error.")
+        else:
+            for error in errors:
+                f.write(f"{error}\n")
 
 
 if __name__ == "__main__":
