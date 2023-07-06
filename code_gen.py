@@ -50,7 +50,7 @@ class CodeGenerator:
         self.codes_generated[1] = ("JP", 2, None, None)
         self.temp_pointer += 4
         self.current_func = None
-        self.current_function_arg_checking_index = 0
+        self.current_function_arg_checking = list()
         self.in_loop = False
 
     def get_var_scope(self, var) -> int:
@@ -77,7 +77,7 @@ class CodeGenerator:
         self.codes_generated[int(line)] = code
 
     def code_gen(self, action):
-        print(action, self.last_id, self.last_num, self.last_type)
+        print(action, self.last_id, self.last_num, self.last_type, self.lexer.lineno)
         if action[0] == "#":
             action = action[1:]
         if action == "get_temp":
@@ -272,11 +272,11 @@ class CodeGenerator:
 
     def exp_end(self):
         self.semantic_stack.pop()
+        self.last_num = None
+        self.last_id = None
+        self.last_type = None
 
     def save_break(self):
-        # if len(self.break_stack) == 0:
-        #     self.semantic_errors.append(SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno))
-        #     return
         if self.in_loop == False:
             self.semantic_errors.append(
                 SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno)
@@ -332,21 +332,19 @@ class CodeGenerator:
         self.funcs_args[self.last_id] = []
 
     def func_call_args_start(self):
-        function_name = "fgaa"
-        self.current_func = function_name
-        self.current_function_arg_checking_index = 0
+        self.current_func = self.last_id
+        self.current_function_arg_checking = list()
+        self.args_id_stack = [self.current_func]
 
     def func_call_args_end(self):
         # args number check
         self.current_func = None
-        self.current_function_arg_checking_index = 0
+        self.current_function_arg_checking = list()
 
     def arg_type_check(self):
-        if not self.current_func:
+        if self.current_func is None:
             return
-        # if index out of bound
-        # top of stack type
-        self.current_function_arg_checking_index += 1
+        arg_id = self.last_id
 
     def loop_start(self):
         self.in_loop = True
@@ -361,6 +359,7 @@ class CodeGenerator:
         self.semantic_stack.append(value)
 
     def to_code_string(self, path):
+        print(self.scope_stack)
         if len(self.semantic_errors) > 0:
             with open(path, "w") as f:
                 f.write(f"{SemanticErrorMessage.CODE_NOT_GENERATED.value}")
@@ -380,6 +379,6 @@ class CodeGenerator:
     def to_semantic_errors(self, path):
         with open(path, "w") as f:
             if len(self.semantic_errors) == 0:
-                f.write(self.SemanticErrorMessage.NO_ERROR.value)
+                f.write(SemanticErrorMessage.NO_ERROR.value)
             else:
                 f.write("\n".join(self.semantic_errors) + "\n")
