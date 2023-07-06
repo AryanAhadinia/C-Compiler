@@ -30,6 +30,9 @@ class CodeGenerator:
         self.codes_generated[self.program_line] = code
         self.program_line += 1
 
+    def store_code_line(self, code, line):
+        self.codes_generated[line] = code
+
     def action_routine(self, action, id, num):
         if action[0] == "#":
             action = action[1:]
@@ -59,6 +62,16 @@ class CodeGenerator:
             self.declare_array()
         elif action == "compare":
             self.compare()
+        elif action == "label":
+            self.label()
+        elif action == "save":
+            self.save()
+        elif action == "jp":
+            self.jp()
+        elif action == "jpf":
+            self.jpf()
+        elif action == "jpf_save":
+            self.jpf_save()
         else:
             raise Exception("Invalid action")
 
@@ -129,3 +142,30 @@ class CodeGenerator:
         result = self.get_temp()
         self.add_code_line((op, left, right, result))
         self.semantic_stack.append(result)
+
+    def label(self):
+        self.semantic_stack.append(self.program_line)
+
+    def save(self):
+        self.label()
+        self.program_line += 1
+
+    def jp(self):
+        code_line = self.semantic_stack.pop()
+        self.store_code_line(("JP", self.program_line, None, None), code_line)
+
+    def jpf(self):
+        condition = self.semantic_stack.pop()
+        jump_address = self.semantic_stack.pop()
+        self.add_code_line(("JPF", condition, jump_address, None))
+
+    def jpf_save(self):
+        code_line = self.semantic_stack.pop()
+        condition = self.semantic_stack.pop()
+        self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
+        self.save()
+
+    def to_code_string(self, path):
+        with open(path, "w") as f:
+            for i in range(self.program_line):
+                f.write(str(i) + ":\t" + str(self.codes_generated[i]) + "\n")
