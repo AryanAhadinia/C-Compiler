@@ -258,6 +258,10 @@ class Parser(object):
                 or (token.type == TokenType.NUM and parsing_symbol == "NUM")
                 or (token.type == TokenType.ID and parsing_symbol == "ID")
             ):
+                if token.type == TokenType.ID:
+                    self.code_generator.last_id = token.value
+                if token.type == TokenType.NUM:
+                    self.code_generator.last_num = token.value
                 self.lexer.get_next_token()
                 return ParseTreeLeafNode(parsing_symbol, token), False
             else:

@@ -4,18 +4,22 @@ class CodeGenerator:
         self.lexer = lexer
 
         self.semantic_stack = list()
-        self.scope_stack = list()
+        self.scope_stack = [dict()]
         self.codes_generated = dict()
 
-        self.program_line = 0
+        self.program_line = 2
         self.current_scope = 0
         self.temp_pointer = 500
 
-    def code_gen(self, action):
-        pass
+        self.last_id = None
+        self.last_num = None
+        self.codes_generated[0] = ('ASSIGN', '#4', 0, None)
+        self.codes_generated[1] = ('JP', 2, None, None)
+        self.temp_pointer += 4
+
 
     def get_var_scope(self, var) -> int:
-        for i, scope in reversed(enumerate(self.scope_stack)):
+        for i, scope in reversed(list(enumerate(self.scope_stack))):
             if var in scope:
                 return i, scope[var]
         return -1, None
@@ -33,15 +37,15 @@ class CodeGenerator:
     def store_code_line(self, code, line):
         self.codes_generated[line] = code
 
-    def action_routine(self, action, id, num):
+    def code_gen(self, action):
         if action[0] == "#":
             action = action[1:]
         if action == "get_temp":
             self.get_temp()
         elif action == "p_id":
-            self.p_id(id)
+            self.p_id(self.last_id)
         elif action == "p_num":
-            self.p_num(num)
+            self.p_num(self.last_num)
         elif action == "add":
             self.add()
         elif action == "sub":
@@ -72,6 +76,8 @@ class CodeGenerator:
             self.jpf()
         elif action == "jpf_save":
             self.jpf_save()
+        elif action == "output":
+            self.output()
         else:
             raise Exception("Invalid action")
 
@@ -109,9 +115,8 @@ class CodeGenerator:
     def assign(self):
         right = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
-        result = self.get_temp()
         self.add_code_line(("ASSIGN", right, left, None))
-        self.semantic_stack.append(result)
+        self.semantic_stack.append(left)
 
     def eq(self):
         self.semantic_stack.append("EQ")
@@ -120,20 +125,17 @@ class CodeGenerator:
         self.semantic_stack.append("LT")
 
     def declare_var(self):
-        var = self.semantic_stack.pop()
-        address = self.get_temp()
-        self.scope_stack[self.current_scope][var] = address
+        address = self.semantic_stack.pop()
         self.add_code_line(("ASSIGN", "#0", address, None))
-        self.semantic_stack.append(address)
+        # self.semantic_stack.append(address)
 
     def declare_array(self):
-        len = int(self.semantic_stack.pop()[1:])
-        var = self.semantic_stack.pop()
-        address = self.get_temp(len=len)
-        self.scope_stack[self.current_scope][var] = address
-        for i in range(len):
-            self.add_code_line(("ASSIGN", "#0", address + i * 4, None))
-        self.semantic_stack.append(address)
+        length = int(self.semantic_stack.pop()[1:])
+        address = self.semantic_stack.pop()
+        self.get_temp(len=(length - 1))
+        for i in range(length - 1):
+            self.add_code_line(("ASSIGN", "#0", int(address) + i * 4, None))
+        # self.semantic_stack.append(address)
 
     def compare(self):
         right = self.semantic_stack.pop()
@@ -165,7 +167,17 @@ class CodeGenerator:
         self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
         self.save()
 
+    def output(self):
+        self.add_code_line(("PRINT", self.semantic_stack.pop(), None, None))
+
     def to_code_string(self, path):
         with open(path, "w") as f:
-            for i in range(self.program_line):
-                f.write(str(i) + ":\t" + str(self.codes_generated[i]) + "\n")
+            for i, code_line in self.codes_generated.items():
+                output = f"{i}\t("
+                for code in code_line:
+                    if code is not None:
+                        output += f"{code}, "
+                    else:
+                        output += ", "
+                output = output[:-2] + ")\n"
+                f.write(output)

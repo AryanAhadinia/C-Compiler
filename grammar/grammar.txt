@@ -35,9 +35,9 @@ Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
 Factor ⟶ ( Expression ) | ID #p_id Var-call-prime | NUM #p_num
-Var-call-prime ⟶ ( Args ) | Var-prime
+Var-call-prime ⟶ ( Args ) #output | Var-prime
 Var-prime ⟶ [ Expression ] | EPSILON
-Factor-prime ⟶ ( Args ) | EPSILON
+Factor-prime ⟶ ( Args ) #output | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
 Arg-list ⟶ Expression Arg-list-prime
