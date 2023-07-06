@@ -6,6 +6,8 @@ class CodeGenerator:
         self.semantic_stack = list()
         self.scope_stack = [{'output': 0}]
         self.codes_generated = dict()
+        self.break_scope = list()
+        self.break_stack = list()
 
         self.program_line = 2
         self.current_scope = 0
@@ -82,6 +84,14 @@ class CodeGenerator:
             self.call_index()
         elif action == "exp_end":
             self.exp_end()
+        elif action == "break":
+            self.save_break()
+        elif action == "jp_break":
+            self.jp_break()
+        elif action == "scope_enter":
+            self.scope_enter()
+        elif action == "scope_exit":
+            self.scope_exit()
         else:
             raise Exception("Invalid action")
 
@@ -139,8 +149,6 @@ class CodeGenerator:
         address = self.semantic_stack.pop()
         self.get_temp(len=(length - 1))
         self.add_code_line(("ASSIGN", "#0", address, None))
-        # for i in range(length - 1):
-        #     self.add_code_line(("ASSIGN", "#0", int(address) + i * 4, None))
         self.semantic_stack.append(address)
 
     def compare(self):
@@ -153,6 +161,7 @@ class CodeGenerator:
 
     def label(self):
         self.semantic_stack.append(self.program_line)
+        self.break_scope.append(len(self.scope_stack))
 
     def save(self):
         self.label()
@@ -184,7 +193,26 @@ class CodeGenerator:
     
     def exp_end(self):
         self.semantic_stack.pop()
+    
+
+    def save_break(self):
+        self.break_stack.append((self.break_scope[-1], self.program_line))
+        self.program_line += 1
+
+
+    def jp_break(self):
+        for i, (scope, line) in enumerate(reversed(self.break_stack)):
+            if scope == self.break_scope[-1]:
+                self.codes_generated[line] = ('JP', f'{self.program_line+1}', None, None)
+                self.break_stack.pop(len(self.break_stack)-1-i)
+        self.break_scope.pop()
         
+    def scope_enter(self):
+        self.scope_stack.append({})
+
+
+    def scope_exit(self):
+        self.scope_stack.pop()
     
     def output(self):
         value = self.semantic_stack.pop()
