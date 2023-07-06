@@ -6,6 +6,8 @@ output.txt
 parse_tree.txt
 syntax_errors.txt
 semantic_errors.txt
+grammar.zip
+Archive.zip
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,pycharm+all,windows,macos,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,visualstudiocode,pycharm+all,windows,macos,linux

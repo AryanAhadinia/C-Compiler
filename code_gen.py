@@ -73,7 +73,7 @@ class CodeGenerator:
 
     def store_code_line(self, code, line):
         if isinstance(line, str):
-            if line.startswith("#"):
+            if line.startswith("#") or line.startswith("@"):
                 line = line[1:]
         self.codes_generated[int(line)] = code
 
@@ -170,11 +170,11 @@ class CodeGenerator:
     def get_type(self, address):
         address = str(address)
         if address.startswith("#"):
-            pass
+            return "int"
         elif address.startswith("@"):
-            pass
+            return "int"
         else:
-            pass
+            return self.address_type_mapping[int(address)]
 
     def p_id(self, id):
         scope, address = self.get_var_scope(id)
@@ -183,7 +183,7 @@ class CodeGenerator:
                 self.semantic_errors.append(
                     SemanticErrorMessage.SCOPING.value.format(self.lexer.lineno, id)
                 )
-                return
+                return # TODO
             address = self.add_var_to_scope(id, self.current_scope)
         self.semantic_stack.append(str(address))
 
@@ -203,6 +203,14 @@ class CodeGenerator:
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        type_left = self.get_type(left)
+        type_right = self.get_type(right)
+        if type_left == "array" or type_right == "array":
+            self.semantic_errors.append(
+                SemanticErrorMessage.TYPE_MISMATCH.value.format(
+                    self.lexer.lineno, "array", "int"
+                )
+            )
         result = self.get_temp()
         self.add_code_line((op, left, right, result))
         self.semantic_stack.append(result)
@@ -210,6 +218,14 @@ class CodeGenerator:
     def assign(self):
         right = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        type_left = self.get_type(left)
+        type_right = self.get_type(right)
+        if type_left == "array" or type_right == "array":
+            self.semantic_errors.append(
+                SemanticErrorMessage.TYPE_MISMATCH.value.format(
+                    self.lexer.lineno, "array", "int"
+                )
+            )
         self.add_code_line(("ASSIGN", right, left, None))
         self.semantic_stack.append(left)
 
@@ -227,7 +243,6 @@ class CodeGenerator:
                 )
             )
             self.last_type = None
-            return
         address = self.semantic_stack.pop()
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
@@ -251,6 +266,14 @@ class CodeGenerator:
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        type_left = self.get_type(left)
+        type_right = self.get_type(right)
+        if type_left == "array" or type_right == "array":
+            self.semantic_errors.append(
+                SemanticErrorMessage.TYPE_MISMATCH.value.format(
+                    self.lexer.lineno, "array", "int"
+                )
+            )
         result = self.get_temp()
         self.add_code_line((op, left, right, result))
         self.semantic_stack.append(result)
@@ -281,6 +304,12 @@ class CodeGenerator:
     def call_index(self):
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
+        if self.get_type(index) != "int":
+            self.semantic_errors.append(
+                SemanticErrorMessage.TYPE_MISMATCH.value.format(
+                    self.lexer.lineno, "int", "array"
+                )
+            )
         result = self.get_temp()
         self.add_code_line(("MULT", index, "#4", result))
         self.add_code_line(("ADD", f"#{array}", result, result))
@@ -297,7 +326,6 @@ class CodeGenerator:
             self.semantic_errors.append(
                 SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno)
             )
-            return
         self.break_stack.append((self.break_scope[-1], self.program_line))
         self.program_line += 1
 
@@ -314,10 +342,16 @@ class CodeGenerator:
         self.break_scope.pop()
 
     def scope_enter(self):
+        self.last_num = None
+        self.last_id = None
+        self.last_type = None
         self.scope_stack.append({})
         self.current_scope += 1
 
     def scope_exit(self):
+        self.last_num = None
+        self.last_id = None
+        self.last_type = None
         self.scope_stack.pop()
         self.current_scope -= 1
 
