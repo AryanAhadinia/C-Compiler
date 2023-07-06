@@ -15,7 +15,7 @@ Statement-list ⟶ Statement Statement-list | EPSILON
 Statement ⟶ Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
 Expression-stmt ⟶ Expression ; #exp_end | break ; #break | ;
 Selection-stmt ⟶ if ( Expression ) #save Statement #jpf_save else Statement #jp
-Iteration-stmt ⟶ repeat #label Statement until ( Expression ) #jp_break #jpf
+Iteration-stmt ⟶ repeat #label #loop_start Statement #loop_end until ( Expression ) #jp_break #jpf
 Return-stmt ⟶ return Return-stmt-prime
 Return-stmt-prime ⟶ ; | Expression ;
 Expression ⟶ Simple-expression-zegond | ID #p_id B
@@ -34,11 +34,11 @@ Term ⟶ Factor G
 Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
-Factor ⟶ ( Expression ) | ID #p_id Var-call-prime | NUM #p_num
+Factor ⟶ ( Expression ) | ID #p_id #func_call_args_start Var-call-prime #func_call_args_end | NUM #p_num
 Var-call-prime ⟶ #add_func_name ( Args ) #output | Var-prime
 Var-prime ⟶ [ Expression #call_index ] | EPSILON
-Factor-prime ⟶ ( Args ) #check_args #output | EPSILON
+Factor-prime ⟶ ( Args ) #output | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
-Arg-list ⟶ Expression #get_arg Arg-list-prime
-Arg-list-prime ⟶ , Expression #get_arg Arg-list-prime | EPSILON
+Arg-list ⟶ Expression #arg_type_check Arg-list-prime
+Arg-list-prime ⟶ , Expression #arg_type_check Arg-list-prime | EPSILON
