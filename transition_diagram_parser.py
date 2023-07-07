@@ -1,11 +1,10 @@
 from abc import abstractmethod
 from enum import Enum
-from pathlib import Path
 from typing import List, Dict, Set
 
-from anytree import Node, RenderTree
+from anytree import Node
 
-from lexer import Lexer, Token, TokenType
+from lexer import Token, TokenType
 from code_gen import CodeGenerator
 
 EPSILON = "EPSILON"
@@ -52,7 +51,7 @@ class Grammar(object):
 
     def get_terminals(self):
         return self.terminals
-    
+
     def get_actions(self):
         return self.actions
 
@@ -61,7 +60,7 @@ class Grammar(object):
 
     def is_terminal(self, symbol):
         return symbol in self.get_terminals()
-    
+
     def is_action(self, symbol):
         return symbol in self.get_actions()
 
@@ -78,7 +77,7 @@ class Grammar(object):
 
     def get_follow(self, symbol):
         return self.follows[symbol]
-    
+
     def filter_actions(self, rhs):
         return [symbol for symbol in rhs if not self.is_action(symbol)]
 
@@ -229,10 +228,14 @@ def get_follows():
 
 def get_grammar():
     productions, start_symbol = compile_productions()
-    terminals, non_terminals, actions = get_terminals_and_non_terminals_and_actions(productions)
+    terminals, non_terminals, actions = get_terminals_and_non_terminals_and_actions(
+        productions
+    )
     firsts = get_firsts()
     follows = get_follows()
-    return Grammar(productions, start_symbol, terminals, non_terminals, actions, firsts, follows)
+    return Grammar(
+        productions, start_symbol, terminals, non_terminals, actions, firsts, follows
+    )
 
 
 class Parser(object):
@@ -262,7 +265,7 @@ class Parser(object):
                     self.code_generator.last_id = token.value
                 if token.type == TokenType.NUM:
                     self.code_generator.last_num = token.value
-                if token.type == TokenType.KEYWORD and token.value in ['int', 'void']:
+                if token.type == TokenType.KEYWORD and token.value in ["int", "void"]:
                     self.code_generator.last_type = token.value
                 self.lexer.get_next_token()
                 return ParseTreeLeafNode(parsing_symbol, token), False
