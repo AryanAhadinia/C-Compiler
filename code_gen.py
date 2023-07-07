@@ -1,6 +1,4 @@
 import enum
-import pprint
-pp = pprint.PrettyPrinter(indent=4)
 
 
 class SemanticErrorMessage(enum.Enum):
@@ -61,7 +59,6 @@ class CodeGenerator:
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
             if var in scope:
-                print(var)
                 return i, scope[var]["addr"]
         return -1, None
 
@@ -82,7 +79,6 @@ class CodeGenerator:
         self.codes_generated[int(line)] = code
 
     def code_gen(self, action):
-        print(action, self.last_id, self.last_num, self.last_type, self.lexer.lineno)
         if self.skip_line is not None and self.skip_line == self.lexer.lineno:
             return
         else:
@@ -187,7 +183,6 @@ class CodeGenerator:
             return self.address_type_mapping[int(address)]
 
     def p_id(self, id):
-        pp.pprint(self.scope_stack)
         if self.last_type is not None:
             self.semantic_stack.append(id)
             return
@@ -215,7 +210,6 @@ class CodeGenerator:
         self.semantic_stack.append("MULT")
 
     def arithmetic(self):
-        print(self.semantic_stack)
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
@@ -239,9 +233,6 @@ class CodeGenerator:
     def assign(self):
         right = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
-        print(self.address_type_mapping)
-        print(self.scope_stack)
-        print(left, right)
         if left == "INVALID" or right == "INVALID":
             self.semantic_stack.append("INVALID")
             return
@@ -405,7 +396,6 @@ class CodeGenerator:
         self.funcs_args[self.last_id] = []
 
     def declare_func_end(self):
-        print(self.scope_stack)
         self.scope_stack[self.current_scope - 1][self.func_declare["id"]] = dict()
         self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
             "params"
@@ -444,16 +434,11 @@ class CodeGenerator:
         self.current_function_arg_checking = list()
 
     def func_call_args_end(self):
-        print(self.scope_stack)
         check_func = self.get_func_params(self.current_func)
         if check_func is None:
             return
         counter = -1
         func_params = self.get_func_params(self.current_func)
-        print(self.current_func)
-        print(self.current_func_address)
-        print(self.current_function_arg_checking)
-        print(func_params)
         if len(self.current_function_arg_checking) != len(func_params):
             self.semantic_errors.append(
                 SemanticErrorMessage.FORMAL_PARAMS_NUM_MATCHING.value.format(
@@ -484,8 +469,6 @@ class CodeGenerator:
         self.current_function_arg_checking = list()
 
     def add_arg(self):
-        print(self.semantic_stack)
-        print(self.address_type_mapping)
         self.current_function_arg_checking.append(self.get_type(self.semantic_stack[-1]))
 
     def loop_start(self):

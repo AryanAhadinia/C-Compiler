@@ -321,7 +321,6 @@ class Parser(object):
                 )
                 if token.type == TokenType.KEYWORD and token.value == "break":
                     self.code_generator.code_gen("break_error")
-                    print('Hiiiiii')
                 self.lexer.get_next_token()
                 sub_root, eof = self.parse_node(parsing_symbol, depth)
                 return sub_root, eof

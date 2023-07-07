@@ -1,13 +1,13 @@
+### Arshan Dalili: 98105751
+### Aryan Ahadinia: 98103878
+
 from pathlib import Path
 
 from anytree import RenderTree
 
 from lexer import Lexer
-from parser_ import Parser, get_grammar
-from code_gen import CodeGenerator
+from parser_ import Parser
 
-### Arshan Dalili: 98105751
-### Aryan Ahadinia: 98103878
 
 def main():
     lexer = Lexer(Path("input.txt"))
