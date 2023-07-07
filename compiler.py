@@ -13,8 +13,7 @@ def main():
     lexer = Lexer(Path("input.txt"))
     parser = Parser(lexer)
     parse_tree, errors = parser.parse()
-    parser.code_generator.to_code_string('output.txt')
-    parser.code_generator.to_semantic_errors('semantic_errors.txt')
+    parser.code_generator.to_code_string("output.txt")
     with open("parse_tree.txt", "w") as f:
         f.write(RenderTree(parse_tree.to_anytree()).by_attr())
     with open("syntax_errors.txt", "w") as f:
