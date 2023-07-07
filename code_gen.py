@@ -90,10 +90,11 @@ class CodeGenerator:
             self.jpf()
         elif action == "jpf_save":
             self.jpf_save()
-        elif action == "output":
+        elif action == "call":
+            # TODO
             self.output()
-        elif action == "call_index":
-            self.call_index()
+        elif action == "array_index":
+            self.array_index()
         elif action == "exp_end":
             self.exp_end()
         elif action == "break":
@@ -108,6 +109,10 @@ class CodeGenerator:
             self.loop_start()
         elif action == "loop_end":
             self.loop_end()
+        elif action == "call":
+            pass
+        elif action == "add_arg":
+            pass
         else:
             raise Exception("Invalid action")
 
@@ -207,7 +212,7 @@ class CodeGenerator:
         self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
         self.save()
 
-    def call_index(self):
+    def array_index(self):
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
         result = self.get_temp()
