@@ -13,24 +13,19 @@ class CodeGenerator:
                 }
             }
         ]
-        self.codes_generated = dict()
+        self.codes_generated = {
+            0: ("ASSIGN", "#4", 0, None),
+            1: ("JP", 2, None, None),
+        }
         self.break_scope = list()
         self.break_stack = list()
-        # self.func_declare = {"id": None, "type": None, "params": []}
 
         self.program_line = 2
-        self.current_scope = 0
-        self.temp_pointer = 500
+        self.temp_pointer = 504
 
         self.last_id = None
         self.last_num = None
         self.last_type = None
-
-        self.codes_generated[0] = ("ASSIGN", "#4", 0, None)
-        self.codes_generated[1] = ("JP", 2, None, None)
-
-        self.temp_pointer += 4
-
         self.in_loop = False
 
     def get_var_scope(self, var) -> int:
@@ -162,23 +157,23 @@ class CodeGenerator:
 
     def declare_var(self):
         id = self.semantic_stack.pop()
-        address = self.add_var_to_scope(id, self.current_scope)
+        address = self.add_var_to_scope(id, -1)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
-        self.scope_stack[self.current_scope][self.last_id] = dict()
-        self.scope_stack[self.current_scope][self.last_id]["addr"] = address
-        self.scope_stack[self.current_scope][self.last_id]["type"] = self.last_type
+        self.scope_stack[-1][self.last_id] = dict()
+        self.scope_stack[-1][self.last_id]["addr"] = address
+        self.scope_stack[-1][self.last_id]["type"] = self.last_type
         self.last_type = None
 
     def declare_array(self):
         length = int(self.semantic_stack.pop()[1:])
         id = self.semantic_stack.pop()
-        address = self.add_var_to_scope(id, self.current_scope, length + 1)
+        address = self.add_var_to_scope(id, -1, length + 1)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
-        self.scope_stack[self.current_scope][self.last_id] = dict()
-        self.scope_stack[self.current_scope][self.last_id]["addr"] = address
-        self.scope_stack[self.current_scope][self.last_id]["type"] = "array"
+        self.scope_stack[-1][self.last_id] = dict()
+        self.scope_stack[-1][self.last_id]["addr"] = address
+        self.scope_stack[-1][self.last_id]["type"] = "array"
         self.last_type = None
 
     def compare(self):
@@ -247,14 +242,12 @@ class CodeGenerator:
         self.last_id = None
         self.last_type = None
         self.scope_stack.append({})
-        self.current_scope += 1
 
     def scope_exit(self):
         self.last_num = None
         self.last_id = None
         self.last_type = None
         self.scope_stack.pop()
-        self.current_scope -= 1
 
     def loop_start(self):
         self.in_loop = True
