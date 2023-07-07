@@ -6,7 +6,7 @@ from pathlib import Path
 from anytree import RenderTree
 
 from lexer import Lexer
-from parser_ import Parser
+from transition_diagram_parser import Parser
 
 
 def main():
