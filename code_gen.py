@@ -169,9 +169,9 @@ class CodeGenerator:
             self.temp_pointer += len * size
             self.address_type_mapping[address] = "int"
         else:
-            self.temp_pointer += (len + 1) * size
+            self.temp_pointer += len * size
             self.address_type_mapping[address] = "array"
-            for i in range(1, len + 1):
+            for i in range(1, len):
                 self.address_type_mapping[address + i * size] = "int"
         return address
     
@@ -286,7 +286,7 @@ class CodeGenerator:
     def declare_array(self):
         length = int(self.semantic_stack.pop()[1:])
         id = self.semantic_stack.pop()
-        address = self.add_var_to_scope(id, self.current_scope, length)
+        address = self.add_var_to_scope(id, self.current_scope, length + 1)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
         self.scope_stack[self.current_scope][self.last_id] = dict()
@@ -436,10 +436,10 @@ class CodeGenerator:
         return None
 
     def func_call_args_start(self):
-        self.current_func = self.last_id
-        check_func = self.get_func_params(self.current_func)
+        check_func = self.get_func_params(self.last_id)
         if check_func is None:
             return
+        self.current_func = self.last_id
         _, self.current_func_address = self.get_var_scope(self.current_func)
         self.current_function_arg_checking = list()
 
@@ -460,6 +460,8 @@ class CodeGenerator:
                     self.lexer.lineno, self.current_func
                 )
             )
+            for i in range(len(self.current_function_arg_checking) - 1):
+                self.semantic_stack.pop()
             return
         for i, arg in enumerate(self.current_function_arg_checking):
             if arg != func_params[i]["type"]:
