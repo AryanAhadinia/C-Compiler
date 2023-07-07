@@ -16,8 +16,7 @@ class CodeGenerator:
         self.codes_generated = dict()
         self.break_scope = list()
         self.break_stack = list()
-        self.semantic_errors = list()
-        self.func_declare = {"id": None, "type": None, "params": []}
+        # self.func_declare = {"id": None, "type": None, "params": []}
 
         self.program_line = 2
         self.current_scope = 0
@@ -26,17 +25,13 @@ class CodeGenerator:
         self.last_id = None
         self.last_num = None
         self.last_type = None
-        self.funcs = list()
-        self.funcs_args = dict()
+
         self.codes_generated[0] = ("ASSIGN", "#4", 0, None)
         self.codes_generated[1] = ("JP", 2, None, None)
-        self.temp_pointer += 4
-        self.current_func = None
-        self.current_function_arg_checking = list()
-        self.in_loop = False
-        self.skip_line = None
 
-        self.address_type_mapping = {}  # TODO: default
+        self.temp_pointer += 4
+
+        self.in_loop = False
 
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
@@ -61,11 +56,6 @@ class CodeGenerator:
         self.codes_generated[int(line)] = code
 
     def code_gen(self, action):
-        if self.skip_line is not None and self.skip_line == self.lexer.lineno:
-            return
-        else:
-            self.skip_line = None
-
         if action[0] == "#":
             action = action[1:]
 
@@ -128,26 +118,8 @@ class CodeGenerator:
 
     def get_temp(self, len=1, size=4):
         address = self.temp_pointer
-        if len == 1:
-            self.temp_pointer += len * size
-            self.address_type_mapping[address] = "int"
-        else:
-            self.temp_pointer += len * size
-            self.address_type_mapping[address] = "array"
-            for i in range(1, len):
-                self.address_type_mapping[address + i * size] = "int"
+        self.temp_pointer += len * size
         return address
-
-    def get_type(self, address):
-        address = str(address)
-        if address.startswith("#"):
-            return "int"
-        elif address.startswith("@"):
-            return "int"
-        elif address == "INVALID":
-            return "INVALID"
-        else:
-            return self.address_type_mapping[int(address)]
 
     def p_id(self, id):
         if self.last_type is not None:
