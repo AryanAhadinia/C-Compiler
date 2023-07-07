@@ -13,7 +13,7 @@ Param-prime ⟶ [ ] #add_array_param | #add_int_param EPSILON
 Compound-stmt ⟶ { #scope_enter Declaration-list Statement-list #scope_exit }
 Statement-list ⟶ Statement Statement-list | EPSILON
 Statement ⟶ Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
-Expression-stmt ⟶ Expression ; #exp_end | break ; #break | ;
+Expression-stmt ⟶ Expression ; #exp_end | break #break ; | ;
 Selection-stmt ⟶ if ( Expression ) #save Statement #jpf_save else Statement #jp
 Iteration-stmt ⟶ repeat #label #loop_start Statement #loop_end until ( Expression ) #jp_break #jpf
 Return-stmt ⟶ return Return-stmt-prime
@@ -34,8 +34,8 @@ Term ⟶ Factor G
 Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
-Factor ⟶ ( Expression ) | ID #p_id #func_call_args_start Var-call-prime #func_call_args_end | NUM #p_num
-Var-call-prime ⟶ ( Args ) #output | Var-prime
+Factor ⟶ ( Expression ) | ID #p_id #func_call_args_start Var-call-prime | NUM #p_num
+Var-call-prime ⟶ ( Args ) #func_call_args_end #output | Var-prime
 Var-prime ⟶ [ Expression #call_index ] | EPSILON
 Factor-prime ⟶ #func_call_args_start ( Args ) #func_call_args_end #output | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num

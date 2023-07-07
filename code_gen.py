@@ -1,4 +1,6 @@
 import enum
+import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 
 class SemanticErrorMessage(enum.Enum):
@@ -59,11 +61,12 @@ class CodeGenerator:
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
             if var in scope:
+                print(var)
                 return i, scope[var]["addr"]
         return -1, None
 
-    def add_var_to_scope(self, var, scope_indicator):
-        address = self.get_temp()
+    def add_var_to_scope(self, var, scope_indicator, length=1):
+        address = self.get_temp(len=length)
         self.scope_stack[scope_indicator][var] = dict()
         self.scope_stack[scope_indicator][var]["addr"] = address
         return address
@@ -85,7 +88,6 @@ class CodeGenerator:
         else:
             self.skip_line = None
         
-
         if action[0] == "#":
             action = action[1:]
         if action == "get_temp":
@@ -163,13 +165,14 @@ class CodeGenerator:
 
     def get_temp(self, len=1, size=4):
         address = self.temp_pointer
-        self.temp_pointer += len * size
         if len == 1:
+            self.temp_pointer += len * size
             self.address_type_mapping[address] = "int"
         else:
-            for i in range(len):
+            self.temp_pointer += (len + 1) * size
+            self.address_type_mapping[address] = "array"
+            for i in range(1, len + 1):
                 self.address_type_mapping[address + i * size] = "int"
-            self.address_type_mapping[address - size] = "array"
         return address
     
     def get_type(self, address):
@@ -184,15 +187,19 @@ class CodeGenerator:
             return self.address_type_mapping[int(address)]
 
     def p_id(self, id):
+        pp.pprint(self.scope_stack)
+        if self.last_type is not None:
+            self.semantic_stack.append(id)
+            return
         scope, address = self.get_var_scope(id)
         if scope == -1:
-            if self.last_type is None:
-                self.semantic_errors.append(
-                    SemanticErrorMessage.SCOPING.value.format(self.lexer.lineno, id)
-                )
-                self.semantic_stack.append('INVALID')
-                return
-            address = self.add_var_to_scope(id, self.current_scope)
+            # if self.last_type is None:
+            self.semantic_errors.append(
+                SemanticErrorMessage.SCOPING.value.format(self.lexer.lineno, id)
+            )
+            self.semantic_stack.append('INVALID')
+            return
+            # address = id #self.add_var_to_scope(id, self.current_scope)
         self.semantic_stack.append(str(address))
 
     def p_num(self, num):
@@ -213,6 +220,7 @@ class CodeGenerator:
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
         if left == "INVALID" or right == "INVALID":
+            self.semantic_stack.append("INVALID")
             return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
@@ -235,6 +243,7 @@ class CodeGenerator:
         print(self.scope_stack)
         print(left, right)
         if left == "INVALID" or right == "INVALID":
+            self.semantic_stack.append("INVALID")
             return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
@@ -257,6 +266,7 @@ class CodeGenerator:
 
     def declare_var(self):
         if self.last_type == "void":
+            self.semantic_stack.pop()
             self.semantic_errors.append(
                 SemanticErrorMessage.VOID_TYPE.value.format(
                     self.lexer.lineno - 1, self.last_id
@@ -264,7 +274,8 @@ class CodeGenerator:
             )
             self.last_type = None
             return
-        address = self.semantic_stack.pop()
+        id = self.semantic_stack.pop()
+        address = self.add_var_to_scope(id, self.current_scope)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
         self.scope_stack[self.current_scope][self.last_id] = dict()
@@ -274,8 +285,8 @@ class CodeGenerator:
 
     def declare_array(self):
         length = int(self.semantic_stack.pop()[1:])
-        address = self.semantic_stack.pop()
-        self.get_temp(len=length)
+        id = self.semantic_stack.pop()
+        address = self.add_var_to_scope(id, self.current_scope, length)
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
         self.scope_stack[self.current_scope][self.last_id] = dict()
@@ -288,6 +299,7 @@ class CodeGenerator:
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
         if left == "INVALID" or right == "INVALID":
+            self.semantic_stack.append("INVALID")
             return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
@@ -353,8 +365,9 @@ class CodeGenerator:
     def save_break(self):
         if self.in_loop == False:
             self.semantic_errors.append(
-                SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno-1)
+                SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno)
             )
+            return
         self.break_stack.append((self.break_scope[-1], self.program_line))
         self.program_line += 1
 
@@ -393,19 +406,25 @@ class CodeGenerator:
 
     def declare_func_end(self):
         print(self.scope_stack)
+        self.scope_stack[self.current_scope - 1][self.func_declare["id"]] = dict()
         self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
             "params"
         ] = self.func_declare["params"]
         self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
             "type"
         ] = self.func_declare["type"]
-        self.func_declare = {"id": None, "type": None, "params": []}
+        self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
+            "addr"
+        ] = self.get_temp()
+        self.func_declare = {"id": None, "addr": None, "type": None, "params": []}
 
     def add_int_param(self):
         self.func_declare["params"].append({"id": self.last_id, "type": "int"})
+        self.add_var_to_scope(self.last_id, self.current_scope)
 
     def add_array_param(self):
         self.func_declare["params"].append({"id": self.last_id, "type": "array"})
+        self.add_var_to_scope(self.last_id, self.current_scope, length=2)
 
     def get_func_params(self, func_id):
         for i, scope in enumerate(reversed(self.scope_stack)):
@@ -425,7 +444,6 @@ class CodeGenerator:
         self.current_function_arg_checking = list()
 
     def func_call_args_end(self):
-        print('Helllloooo')
         print(self.scope_stack)
         check_func = self.get_func_params(self.current_func)
         if check_func is None:
@@ -458,6 +476,8 @@ class CodeGenerator:
                 )
                 self.skip_line = self.lexer.lineno
                 return
+        for i in range(len(self.current_function_arg_checking) - 1):
+            self.semantic_stack.pop()
         self.current_func = None
         self.current_function_arg_checking = list()
 
@@ -475,8 +495,6 @@ class CodeGenerator:
     def output(self):
         value = self.semantic_stack.pop()
         self.add_code_line(("PRINT", value, None, None))
-        self.semantic_stack.pop()
-        self.semantic_stack.append(value)
 
     def to_code_string(self, path):
         if len(self.semantic_errors) > 0:
