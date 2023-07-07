@@ -141,16 +141,14 @@ class CodeGenerator:
             self.add_int_param()
         elif action == "add_array_param":
             self.add_array_param()
-        elif action == "add_func_name":
-            self.add_func_name()
         elif action == "loop_start":
             self.loop_start()
         elif action == "loop_end":
             self.loop_end()
         elif action == "func_call_args_start":
-            pass
+            self.func_call_args_start()
         elif action == "func_call_args_end":
-            pass
+            self.func_call_args_end()
         elif action == "arg_type_check":
             pass
         else:
@@ -183,7 +181,8 @@ class CodeGenerator:
                 self.semantic_errors.append(
                     SemanticErrorMessage.SCOPING.value.format(self.lexer.lineno, id)
                 )
-                return # TODO
+                self.semantic_stack.append('INVALID')
+                return
             address = self.add_var_to_scope(id, self.current_scope)
         self.semantic_stack.append(str(address))
 
@@ -203,6 +202,8 @@ class CodeGenerator:
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        if left == "INVALID" or right == "INVALID":
+            return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
         if type_left == "array" or type_right == "array":
@@ -211,6 +212,8 @@ class CodeGenerator:
                     self.lexer.lineno, "array", "int"
                 )
             )
+            self.semantic_stack.append("INVALID")
+            return
         result = self.get_temp()
         self.add_code_line((op, left, right, result))
         self.semantic_stack.append(result)
@@ -218,6 +221,8 @@ class CodeGenerator:
     def assign(self):
         right = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        if left == "INVALID" or right == "INVALID":
+            return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
         if type_left == "array" or type_right == "array":
@@ -226,6 +231,8 @@ class CodeGenerator:
                     self.lexer.lineno, "array", "int"
                 )
             )
+            self.semantic_stack.append("INVALID")
+            return
         self.add_code_line(("ASSIGN", right, left, None))
         self.semantic_stack.append(left)
 
@@ -243,6 +250,7 @@ class CodeGenerator:
                 )
             )
             self.last_type = None
+            return
         address = self.semantic_stack.pop()
         self.add_code_line(("ASSIGN", "#0", address, None))
         self.semantic_stack.append(address)
@@ -266,6 +274,8 @@ class CodeGenerator:
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        if left == "INVALID" or right == "INVALID":
+            return
         type_left = self.get_type(left)
         type_right = self.get_type(right)
         if type_left == "array" or type_right == "array":
@@ -274,6 +284,8 @@ class CodeGenerator:
                     self.lexer.lineno, "array", "int"
                 )
             )
+            self.semantic_stack.append("INVALID")
+            return
         result = self.get_temp()
         self.add_code_line((op, left, right, result))
         self.semantic_stack.append(result)
@@ -304,12 +316,16 @@ class CodeGenerator:
     def call_index(self):
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
+        if index == "INVALID" or array == "INVALID":
+            return
         if self.get_type(index) != "int":
             self.semantic_errors.append(
                 SemanticErrorMessage.TYPE_MISMATCH.value.format(
                     self.lexer.lineno, "int", "array"
                 )
             )
+            self.semantic_stack.append("INVALID")
+            return
         result = self.get_temp()
         self.add_code_line(("MULT", index, "#4", result))
         self.add_code_line(("ADD", f"#{array}", result, result))
@@ -377,24 +393,62 @@ class CodeGenerator:
     def add_array_param(self):
         self.func_declare["params"].append({"id": self.last_id, "type": "array"})
 
-    def add_func_name(self):
-        self.funcs.append(self.last_id)
-        self.funcs_args[self.last_id] = []
+    def get_func_params(self, func_id):
+        for i, scope in enumerate(reversed(self.scope_stack)):
+            if func_id in scope:
+                if 'params' in scope[func_id]:
+                    return scope[func_id]["params"]
+                else:
+                    continue
+        return None
 
     def func_call_args_start(self):
         self.current_func = self.last_id
-        self.current_function_arg_checking = list()
-        self.args_id_stack = [self.current_func]
+        check_func = self.get_func_params(self.current_func)
+        if check_func is None:
+            return
+        _, self.current_func_address = self.get_var_scope(self.current_func)
 
     def func_call_args_end(self):
-        # args number check
+        # args number and type check
+        check_func = self.get_func_params(self.current_func)
+        if check_func is None:
+            return
+        args = []
+        counter = -1
+        while self.semantic_stack[counter] != str(self.current_func_address):
+            args.append(self.semantic_stack[counter])
+            counter -= 1
+        args.reverse()
+        func_params = self.get_func_params(self.current_func)
+        print(self.current_func)
+        print(self.current_func_address)
+        print(self.scope_stack)
+        print(args)
+        print(func_params)
+        if len(args) != len(func_params):
+            self.semantic_errors.append(
+                SemanticErrorMessage.FORMAL_PARAMS_NUM_MATCHING.value.format(
+                    self.lexer.lineno, self.current_func
+                )
+            )
+            self.semantic_stack.append("INVALID")
+            return
+        for i, arg in enumerate(args):
+            if self.get_type(arg) != func_params[i]["type"]:
+                self.semantic_errors.append(
+                    SemanticErrorMessage.FORMAL_PARAM_TYPE_MATCHING.value.format(
+                        self.lexer.lineno,
+                        i + 1,
+                        self.current_func,
+                        self.current_function_arg_checking[i],
+                        self.get_type(arg),
+                    )
+                )
+                self.semantic_stack.append("INVALID")
+                return
         self.current_func = None
         self.current_function_arg_checking = list()
-
-    def arg_type_check(self):
-        if self.current_func is None:
-            return
-        arg_id = self.last_id
 
     def loop_start(self):
         self.in_loop = True
@@ -409,7 +463,6 @@ class CodeGenerator:
         self.semantic_stack.append(value)
 
     def to_code_string(self, path):
-        print(self.scope_stack)
         if len(self.semantic_errors) > 0:
             with open(path, "w") as f:
                 f.write(f"{SemanticErrorMessage.CODE_NOT_GENERATED.value}")
