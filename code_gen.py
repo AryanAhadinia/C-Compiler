@@ -52,6 +52,7 @@ class CodeGenerator:
         self.current_func = None
         self.current_function_arg_checking = list()
         self.in_loop = False
+        self.skip_line = None
 
         self.address_type_mapping = {} # TODO: default
 
@@ -79,6 +80,12 @@ class CodeGenerator:
 
     def code_gen(self, action):
         print(action, self.last_id, self.last_num, self.last_type, self.lexer.lineno)
+        if self.skip_line is not None and self.skip_line == self.lexer.lineno:
+            return
+        else:
+            self.skip_line = None
+        
+
         if action[0] == "#":
             action = action[1:]
         if action == "get_temp":
@@ -149,8 +156,8 @@ class CodeGenerator:
             self.func_call_args_start()
         elif action == "func_call_args_end":
             self.func_call_args_end()
-        elif action == "arg_type_check":
-            pass
+        elif action == "add_arg":
+            self.add_arg()
         else:
             raise Exception("Invalid action")
 
@@ -160,7 +167,7 @@ class CodeGenerator:
         if len == 1:
             self.address_type_mapping[address] = "int"
         else:
-            for i in range(1, len):
+            for i in range(len):
                 self.address_type_mapping[address + i * size] = "int"
             self.address_type_mapping[address - size] = "array"
         return address
@@ -171,6 +178,8 @@ class CodeGenerator:
             return "int"
         elif address.startswith("@"):
             return "int"
+        elif address == "INVALID":
+            return "INVALID"
         else:
             return self.address_type_mapping[int(address)]
 
@@ -199,6 +208,7 @@ class CodeGenerator:
         self.semantic_stack.append("MULT")
 
     def arithmetic(self):
+        print(self.semantic_stack)
         right = self.semantic_stack.pop()
         op = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
@@ -221,6 +231,9 @@ class CodeGenerator:
     def assign(self):
         right = self.semantic_stack.pop()
         left = self.semantic_stack.pop()
+        print(self.address_type_mapping)
+        print(self.scope_stack)
+        print(left, right)
         if left == "INVALID" or right == "INVALID":
             return
         type_left = self.get_type(left)
@@ -340,7 +353,7 @@ class CodeGenerator:
     def save_break(self):
         if self.in_loop == False:
             self.semantic_errors.append(
-                SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno)
+                SemanticErrorMessage.BREAK_STATEMENT.value.format(self.lexer.lineno-1)
             )
         self.break_stack.append((self.break_scope[-1], self.program_line))
         self.program_line += 1
@@ -379,10 +392,11 @@ class CodeGenerator:
         self.funcs_args[self.last_id] = []
 
     def declare_func_end(self):
-        self.scope_stack[self.current_scope][self.func_declare["id"]][
+        print(self.scope_stack)
+        self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
             "params"
         ] = self.func_declare["params"]
-        self.scope_stack[self.current_scope][self.func_declare["id"]][
+        self.scope_stack[self.current_scope - 1][self.func_declare["id"]][
             "type"
         ] = self.func_declare["type"]
         self.func_declare = {"id": None, "type": None, "params": []}
@@ -408,47 +422,49 @@ class CodeGenerator:
         if check_func is None:
             return
         _, self.current_func_address = self.get_var_scope(self.current_func)
+        self.current_function_arg_checking = list()
 
     def func_call_args_end(self):
-        # args number and type check
+        print('Helllloooo')
+        print(self.scope_stack)
         check_func = self.get_func_params(self.current_func)
         if check_func is None:
             return
-        args = []
         counter = -1
-        while self.semantic_stack[counter] != str(self.current_func_address):
-            args.append(self.semantic_stack[counter])
-            counter -= 1
-        args.reverse()
         func_params = self.get_func_params(self.current_func)
         print(self.current_func)
         print(self.current_func_address)
-        print(self.scope_stack)
-        print(args)
+        print(self.current_function_arg_checking)
         print(func_params)
-        if len(args) != len(func_params):
+        if len(self.current_function_arg_checking) != len(func_params):
             self.semantic_errors.append(
                 SemanticErrorMessage.FORMAL_PARAMS_NUM_MATCHING.value.format(
                     self.lexer.lineno, self.current_func
                 )
             )
-            self.semantic_stack.append("INVALID")
             return
-        for i, arg in enumerate(args):
-            if self.get_type(arg) != func_params[i]["type"]:
+        for i, arg in enumerate(self.current_function_arg_checking):
+            if arg != func_params[i]["type"]:
+                if arg == "INVALID":
+                    continue
                 self.semantic_errors.append(
                     SemanticErrorMessage.FORMAL_PARAM_TYPE_MATCHING.value.format(
                         self.lexer.lineno,
                         i + 1,
                         self.current_func,
-                        self.current_function_arg_checking[i],
-                        self.get_type(arg),
+                        func_params[i]['type'],
+                        arg,
                     )
                 )
-                self.semantic_stack.append("INVALID")
+                self.skip_line = self.lexer.lineno
                 return
         self.current_func = None
         self.current_function_arg_checking = list()
+
+    def add_arg(self):
+        print(self.semantic_stack)
+        print(self.address_type_mapping)
+        self.current_function_arg_checking.append(self.get_type(self.semantic_stack[-1]))
 
     def loop_start(self):
         self.in_loop = True
