@@ -20,8 +20,8 @@ class CodeGenerator:
         self.break_scope = list()
         self.break_stack = list()
 
-        self.program_line = 2
-        self.temp_pointer = 504
+        self.program_line = len(self.codes_generated)
+        self.temp_pointer = 500
 
         self.last_id = None
         self.last_num = None
