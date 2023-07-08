@@ -169,7 +169,7 @@ class CodeGenerator:
         length = int(self.semantic_stack.pop()[1:])
         id = self.semantic_stack.pop()
         address = self.add_var_to_scope(id, -1, length + 1)
-        self.add_code_line(("ASSIGN", "#0", address, None))
+        self.add_code_line(("ASSIGN", f"#{address + 4}", address, None))
         self.semantic_stack.append(address)
         self.scope_stack[-1][self.last_id] = dict()
         self.scope_stack[-1][self.last_id]["addr"] = address
