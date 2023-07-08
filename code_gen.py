@@ -68,7 +68,7 @@ class CodeGenerator:
         self.add_code_line(("ADD", "#4", self.stack_pointer, self.stack_pointer))
 
     def pop_from_stack(self, write_back_addr):
-        self.add_code_line(("SUB", "#4", self.stack_pointer, self.stack_pointer))
+        self.add_code_line(("SUB", self.stack_pointer, "#4", self.stack_pointer))
         self.add_code_line(("ASSIGN", self.stack_pointer, write_back_addr, None))
 
     def code_gen(self, action):
@@ -134,22 +134,20 @@ class CodeGenerator:
             self.end_declaring_params()
         elif action == "signature_declared":
             self.signature_declared()
-        elif action == "default_return":
-            self.default_return()
         elif action == "declare_array_param":
             self.declare_array_param()
         elif action == "declare_int_param":
             self.declare_int_param()
         elif action == "function_declared":
             self.function_declared()
-        elif action == "push_params":
-            self.push_params()
-        elif action == "pop_params":
-            self.pop_params()
         elif action == "push_return_address":
             self.push_return_address()
         elif action == "pop_return_address":
             self.pop_return_address()
+        elif action == "push_return_value":
+            self.push_return_value()
+        elif action == "pop_return_value":
+            self.pop_return_value()
         elif action == "push_state":
             self.push_state()
         elif action == "pop_state":
@@ -158,35 +156,14 @@ class CodeGenerator:
             self.return_void()
         elif action == "return_int":
             self.return_int()
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "call":
-            pass
-        elif action == "add_arg":
-            pass
+        elif action == "default_return":
+            self.default_return()
+        elif action == "push_arg":
+            self.push_arg()
+        elif action == "pop_args":
+            self.pop_args()
         else:
+            print(action)
             raise Exception("Invalid action")
 
     def get_temp(self, length=1, size=4):
@@ -289,6 +266,9 @@ class CodeGenerator:
         self.store_code_line(("JPF", condition, self.program_line + 1, None), code_line)
         self.save()
 
+    def call(self):
+        pass
+
     def array_index(self):
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
@@ -322,7 +302,7 @@ class CodeGenerator:
     def scope_enter(self):
         if not self.jumped_to_main:
             self.waiting_function_jumps[self.program_line] = "main"
-            self.save()
+            self.program_line += 1
             self.jumped_to_main = True
         self.last_num = None
         self.last_id = None
@@ -348,6 +328,7 @@ class CodeGenerator:
         pass
 
     def signature_declared(self):
+        self.current_function_name = self.semantic_stack.pop()
         self.scope_stack[-2][self.current_function_name] = {
             "addr": self.program_line,
             "type": self.current_function_type,
@@ -357,20 +338,10 @@ class CodeGenerator:
             if function_name == self.current_function_name:
                 self.store_code_line(("JP", self.program_line, None, None), line)
 
-    def push_params(self):
-        pass
-
-    def pop_params(self):
-        pass
-
-    def default_return(self):
-        if self.current_function_name != "main":
-            self.add_code_line(("JP", f"@{self.return_address}", None, None))
-
     def declare_array_param(self):
         self.declaring_function_params.append(
             {
-                "id": self.last_id,
+                "id": self.semantic_stack.pop(),
                 "type": "array",
             }
         )
@@ -379,7 +350,7 @@ class CodeGenerator:
     def declare_int_param(self):
         self.declaring_function_params.append(
             {
-                "id": self.last_id,
+                "id": self.semantic_stack.pop(),
                 "type": "int",
             }
         )
@@ -394,13 +365,22 @@ class CodeGenerator:
         for address_scope in reversed(self.address_scope_stack[-2:]):
             for addr in reversed(address_scope):
                 self.pop_from_stack(addr)
-            
+
     def push_return_address(self):
-        self.push_to_stack(self.program_line + 3)  # TODO: check 3
+        self.push_to_stack(self.program_line + 3)
 
     def pop_return_address(self):
         self.pop_from_stack(self.return_address)
-        
+
+    def push_return_value(self):
+        addr = self.semantic_stack.pop()
+        self.push_to_stack(addr)
+
+    def pop_return_value(self):
+        addr = self.get_temp()
+        self.pop_from_stack(addr)
+        self.semantic_stack.append(addr)
+
     def return_void(self):
         self.push_to_stack("#0")
         self.add_code_line(("JP", f"@{self.return_address}", None, None))
@@ -410,8 +390,21 @@ class CodeGenerator:
         self.push_to_stack(addr)
         self.add_code_line(("JP", f"@{self.return_address}", None, None))
 
+    def default_return(self):
+        self.push_to_stack("#0")
+        if self.current_function_name != "main":
+            self.add_code_line(("JP", f"@{self.return_address}", None, None))
+
     def function_declared(self):
         self.current_function_name = None
+
+    def push_arg(self):
+        arg_addr = self.semantic_stack.pop()
+        self.push_to_stack(arg_addr)
+
+    def pop_args(self):
+        for var in reversed(self.scope_stack[-1]):
+            self.pop_from_stack(self.scope_stack[-1][var]["addr"])
 
     def output(self):
         value = self.semantic_stack.pop()

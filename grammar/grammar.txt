@@ -4,7 +4,7 @@ Declaration ⟶ Declaration-initial Declaration-prime
 Declaration-initial ⟶ Type-specifier ID #p_id
 Declaration-prime ⟶ Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime ⟶ ; #declare_var | [ NUM #p_num ] #declare_array ;
-Fun-declaration-prime ⟶ #declaring_function #scope_enter ( #start_declaring_params Params #end_declaring_params ) #signature_declared #pop_params #pop_return_address Compound-stmt #default_return #function_declared #scope_exit
+Fun-declaration-prime ⟶ #declaring_function #scope_enter ( #start_declaring_params Params #end_declaring_params ) #signature_declared #pop_return_address #pop_args Compound-stmt #default_return #function_declared #scope_exit
 Type-specifier ⟶ int | void
 Params ⟶ int ID #p_id Param-prime Param-list | void
 Param-list ⟶ , Param Param-list | EPSILON
@@ -40,5 +40,5 @@ Var-prime ⟶ [ Expression #array_index ] | EPSILON
 Factor-prime ⟶ ( Args ) #call | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
-Arg-list ⟶ Expression #add_arg Arg-list-prime
-Arg-list-prime ⟶ , Expression #add_arg Arg-list-prime | EPSILON
+Arg-list ⟶ Expression Arg-list-prime
+Arg-list-prime ⟶ , Expression Arg-list-prime | EPSILON
