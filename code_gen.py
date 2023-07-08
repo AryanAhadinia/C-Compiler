@@ -4,6 +4,9 @@ class CodeGenerator:
         self.lexer = lexer
 
         self.semantic_stack = list()
+        self.break_scope = list()
+        self.break_stack = list()
+
         self.scope_stack = [
             {
                 "output": {
@@ -14,19 +17,15 @@ class CodeGenerator:
             }
         ]
         self.codes_generated = {
-            0: ("ASSIGN", "#4", 0, None),
-            1: ("JP", 2, None, None),
+            0: ("JP", 2, None, None),
         }
-        self.break_scope = list()
-        self.break_stack = list()
-
+        
         self.program_line = len(self.codes_generated)
         self.temp_pointer = 500
 
         self.last_id = None
         self.last_num = None
         self.last_type = None
-        self.in_loop = False
 
     def get_var_scope(self, var) -> int:
         for i, scope in reversed(list(enumerate(self.scope_stack))):
@@ -105,10 +104,6 @@ class CodeGenerator:
             self.scope_enter()
         elif action == "scope_exit":
             self.scope_exit()
-        elif action == "loop_start":
-            self.loop_start()
-        elif action == "loop_end":
-            self.loop_end()
         elif action == "call":
             pass
         elif action == "add_arg":
@@ -253,12 +248,6 @@ class CodeGenerator:
         self.last_id = None
         self.last_type = None
         self.scope_stack.pop()
-
-    def loop_start(self):
-        self.in_loop = True
-
-    def loop_end(self):
-        self.in_loop = False
 
     def output(self):
         value = self.semantic_stack.pop()
