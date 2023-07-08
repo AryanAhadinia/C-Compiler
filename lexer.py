@@ -148,7 +148,7 @@ class Lexer:
             # ID and KEYWORD Handler
             elif self.current_char.isalpha():
                 while self.current_char is not None:
-                    if self.current_char.isalnum():
+                    if self.current_char.isalnum() or (self.current_char == '_' and len(result) > 0):
                         result += self.current_char
                         self.advance()
                     elif self.current_char.isspace() or self.current_char in SYMBOLS:
