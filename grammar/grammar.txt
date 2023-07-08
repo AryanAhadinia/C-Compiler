@@ -35,10 +35,10 @@ Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
 Factor ⟶ ( Expression ) | ID #p_id Var-call-prime | NUM #p_num
-Var-call-prime ⟶ ( Args ) #call | Var-prime
+Var-call-prime ⟶ ( Args ) #push_return_address #call | Var-prime
 Var-prime ⟶ [ Expression #array_index ] | EPSILON
-Factor-prime ⟶ ( Args ) #call | EPSILON
+Factor-prime ⟶ ( Args ) #push_return_address #call #pop_return_value | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
-Arg-list ⟶ Expression Arg-list-prime
-Arg-list-prime ⟶ , Expression Arg-list-prime | EPSILON
+Arg-list ⟶ Expression #push_arg Arg-list-prime
+Arg-list-prime ⟶ , Expression #push_arg Arg-list-prime | EPSILON

@@ -11,11 +11,12 @@ class CodeGenerator:
 
         self.stack_pointer = 100
         self.return_address = 104
+        self.print_param = 108
 
         self.scope_stack = [
             {
                 "output": {
-                    "addr": 0,
+                    "addr": 1,
                     "type": "int",
                     "params": [{"id": "a", "type": "int"}],
                 }
@@ -25,8 +26,17 @@ class CodeGenerator:
             [],
         ]
         self.codes_generated = {
-            0: ("ASSIGN", "#4000", self.stack_pointer, None),
-            1: ("ASSIGN", "#0", self.return_address, None),
+            0: ("JP", 9, None, None), #TODO
+            1: ("SUB", self.stack_pointer, "#4", self.stack_pointer),
+            2: ("ASSIGN", f"@{self.stack_pointer}", self.return_address, None),
+            3: ("SUB", self.stack_pointer, "#4", self.stack_pointer),
+            4: ("ASSIGN", f"@{self.stack_pointer}", self.print_param, None),
+            5: ("PRINT", self.print_param, None, None),
+            6: ("ASSIGN", "#0", f"@{self.stack_pointer}", None),
+            7: ("ADD", "#4", self.stack_pointer, self.stack_pointer),
+            8: ("JP", f"@{self.return_address}", None, None),
+            9: ("ASSIGN", "#4000", self.stack_pointer, None),
+            10: ("ASSIGN", "#0", self.return_address, None),
         }
         self.waiting_function_jumps = {}
 
@@ -64,12 +74,12 @@ class CodeGenerator:
         self.codes_generated[int(line)] = code
 
     def push_to_stack(self, addr):
-        self.add_code_line(("ASSIGN", addr, self.stack_pointer, None))
+        self.add_code_line(("ASSIGN", addr, f"@{self.stack_pointer}", None))
         self.add_code_line(("ADD", "#4", self.stack_pointer, self.stack_pointer))
 
     def pop_from_stack(self, write_back_addr):
         self.add_code_line(("SUB", self.stack_pointer, "#4", self.stack_pointer))
-        self.add_code_line(("ASSIGN", self.stack_pointer, write_back_addr, None))
+        self.add_code_line(("ASSIGN", f"@{self.stack_pointer}", write_back_addr, None))
 
     def code_gen(self, action):
         if action[0] == "#":
@@ -112,8 +122,7 @@ class CodeGenerator:
         elif action == "jpf_save":
             self.jpf_save()
         elif action == "call":
-            # TODO
-            self.output()
+            self.call()
         elif action == "array_index":
             self.array_index()
         elif action == "exp_end":
@@ -216,7 +225,6 @@ class CodeGenerator:
         id = self.semantic_stack.pop()
         address = self.add_var_to_scope(id, -1, "int")
         self.add_code_line(("ASSIGN", "#0", address, None))
-        self.semantic_stack.append(address)
         self.scope_stack[-1][self.last_id] = dict()
         self.scope_stack[-1][self.last_id]["addr"] = address
         self.scope_stack[-1][self.last_id]["type"] = self.last_type
@@ -229,7 +237,6 @@ class CodeGenerator:
         self.add_code_line(("ASSIGN", f"#{address + 4}", address, None))
         for i in range(length):
             self.add_code_line(("ASSIGN", "#0", address + 4 + i * 4, None))
-        self.semantic_stack.append(address)
         self.scope_stack[-1][self.last_id] = dict()
         self.scope_stack[-1][self.last_id]["addr"] = address
         self.scope_stack[-1][self.last_id]["type"] = "array"
@@ -267,7 +274,8 @@ class CodeGenerator:
         self.save()
 
     def call(self):
-        pass
+        function_addr = self.semantic_stack.pop()
+        self.add_code_line(("JP", function_addr, None, None))
 
     def array_index(self):
         index = self.semantic_stack.pop()
@@ -367,10 +375,11 @@ class CodeGenerator:
                 self.pop_from_stack(addr)
 
     def push_return_address(self):
-        self.push_to_stack(self.program_line + 3)
+        self.push_to_stack(f"#{self.program_line + 3}")
 
     def pop_return_address(self):
-        self.pop_from_stack(self.return_address)
+        if self.current_function_name != "main":
+            self.pop_from_stack(self.return_address)
 
     def push_return_value(self):
         addr = self.semantic_stack.pop()
