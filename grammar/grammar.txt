@@ -2,14 +2,14 @@ Program ⟶ Declaration-list
 Declaration-list ⟶ Declaration Declaration-list | EPSILON
 Declaration ⟶ Declaration-initial Declaration-prime
 Declaration-initial ⟶ Type-specifier ID #p_id
-Declaration-prime ⟶ #declare_func_start Fun-declaration-prime | Var-declaration-prime
+Declaration-prime ⟶ Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime ⟶ ; #declare_var | [ NUM #p_num ] #declare_array ;
-Fun-declaration-prime ⟶ #scope_enter ( Params ) #declare_func_end Compound-stmt #scope_exit
+Fun-declaration-prime ⟶ #scope_enter ( Params ) Compound-stmt #scope_exit
 Type-specifier ⟶ int | void
 Params ⟶ int ID #p_id Param-prime Param-list | void
 Param-list ⟶ , Param Param-list | EPSILON
 Param ⟶ Declaration-initial Param-prime
-Param-prime ⟶ [ ] #add_array_param | #add_int_param EPSILON
+Param-prime ⟶ [ ] | EPSILON
 Compound-stmt ⟶ { #scope_enter Declaration-list Statement-list #scope_exit }
 Statement-list ⟶ Statement Statement-list | EPSILON
 Statement ⟶ Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
@@ -19,7 +19,7 @@ Iteration-stmt ⟶ repeat #label #loop_start Statement #loop_end until ( Express
 Return-stmt ⟶ return Return-stmt-prime
 Return-stmt-prime ⟶ ; | Expression ;
 Expression ⟶ Simple-expression-zegond | ID #p_id B
-B ⟶ = Expression #assign | [ Expression #call_index ] H | Simple-expression-prime
+B ⟶ = Expression #assign | [ Expression #array_index ] H | Simple-expression-prime
 H ⟶ = Expression #assign | G D C
 Simple-expression-zegond ⟶ Additive-expression-zegond C
 Simple-expression-prime ⟶ Additive-expression-prime C
@@ -34,10 +34,10 @@ Term ⟶ Factor G
 Term-prime ⟶ Factor-prime G
 Term-zegond ⟶ Factor-zegond G
 G ⟶ * #mult Factor #arithmetic G | EPSILON
-Factor ⟶ ( Expression ) | ID #p_id #func_call_args_start Var-call-prime | NUM #p_num
-Var-call-prime ⟶ ( Args ) #func_call_args_end #output | Var-prime
-Var-prime ⟶ [ Expression #call_index ] | EPSILON
-Factor-prime ⟶ #func_call_args_start ( Args ) #func_call_args_end #output | EPSILON
+Factor ⟶ ( Expression ) | ID #p_id Var-call-prime | NUM #p_num
+Var-call-prime ⟶ ( Args ) #call | Var-prime
+Var-prime ⟶ [ Expression #array_index ] | EPSILON
+Factor-prime ⟶ ( Args ) #call | EPSILON
 Factor-zegond ⟶ ( Expression ) | NUM #p_num
 Args ⟶ Arg-list | EPSILON
 Arg-list ⟶ Expression #add_arg Arg-list-prime
