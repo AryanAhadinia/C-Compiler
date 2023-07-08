@@ -178,8 +178,7 @@ class CodeGenerator:
     def get_temp(self, length=1, size=4):
         address = self.temp_pointer
         self.temp_pointer += length * size
-        for i in range(length):
-            self.address_scope_stack[-1].append(address + i * 4)
+        self.address_scope_stack[-1].append(address)
         return address
 
     def p_id(self, id):
@@ -367,6 +366,7 @@ class CodeGenerator:
     def push_state(self):
         for address_scope in self.address_scope_stack[-2:]:
             for addr in address_scope:
+                print(addr)
                 self.push_to_stack(addr)
         self.push_to_stack(self.return_address)
 
@@ -374,6 +374,7 @@ class CodeGenerator:
         self.pop_from_stack(self.return_address)
         for address_scope in reversed(self.address_scope_stack[-2:]):
             for addr in reversed(address_scope):
+                print(addr)
                 self.pop_from_stack(addr)
 
     def push_return_address(self):
