@@ -26,7 +26,7 @@ class CodeGenerator:
             [],
         ]
         self.codes_generated = {
-            0: ("JP", 9, None, None), #TODO
+            0: ("JP", 9, None, None),
             1: ("SUB", self.stack_pointer, "#4", self.stack_pointer),
             2: ("ASSIGN", f"@{self.stack_pointer}", self.return_address, None),
             3: ("SUB", self.stack_pointer, "#4", self.stack_pointer),
@@ -48,6 +48,7 @@ class CodeGenerator:
         self.current_function_name = None
         self.current_function_type = None
         self.declaring_function_params = []
+        self.state_saved = []
         self.jumped_to_main = False
 
     def get_var_scope(self, var) -> int:
@@ -364,18 +365,18 @@ class CodeGenerator:
         self.add_var_to_scope(self.last_id, -1, "int")
 
     def push_state(self):
-        for address_scope in self.address_scope_stack[-2:]:
+        self.state_saved = []
+        for address_scope in self.address_scope_stack[1:]:
             for addr in address_scope:
-                print(addr)
                 self.push_to_stack(addr)
+                self.state_saved.append(addr)
         self.push_to_stack(self.return_address)
 
     def pop_state(self):
         self.pop_from_stack(self.return_address)
-        for address_scope in reversed(self.address_scope_stack[-2:]):
-            for addr in reversed(address_scope):
-                print(addr)
-                self.pop_from_stack(addr)
+        for addr in reversed(self.state_saved):
+            self.pop_from_stack(addr)
+        self.state_saved = []
 
     def push_return_address(self):
         self.push_to_stack(f"#{self.program_line + 3}")
