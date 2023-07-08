@@ -11,7 +11,6 @@ class CodeGenerator:
 
         self.stack_pointer = 100
         self.return_address = 104
-        self.dummy_address = 108
 
         self.scope_stack = [
             {
