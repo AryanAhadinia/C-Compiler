@@ -17,7 +17,7 @@ class CodeGenerator:
             }
         ]
         self.codes_generated = {
-            0: ("JP", 2, None, None),
+            0: ("JP", 1, None, None),
         }
         
         self.program_line = len(self.codes_generated)
@@ -211,9 +211,8 @@ class CodeGenerator:
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
         result = self.get_temp()
-        self.add_code_line(("ADD", index, "#1", result))
-        self.add_code_line(("MULT", result, "#4", result))
-        self.add_code_line(("ADD", f"#{array}", result, result))
+        self.add_code_line(("MULT", index, "#4", result))
+        self.add_code_line(("ADD", f"{array}", result, result))
         self.semantic_stack.append("@" + str(result))
 
     def exp_end(self):
