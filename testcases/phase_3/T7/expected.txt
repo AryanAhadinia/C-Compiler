@@ -1,3 +1,0 @@
-PRINT    4
-PRINT    -2
-PRINT    8

@@ -1,7 +1,0 @@
-PRINT    8
-PRINT    8
-PRINT    11
-PRINT    10
-PRINT    9
-PRINT    8
-

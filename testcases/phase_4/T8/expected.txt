@@ -1,3 +1,0 @@
-PRINT    206
-PRINT    203
-PRINT    107
