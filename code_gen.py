@@ -211,7 +211,8 @@ class CodeGenerator:
         index = self.semantic_stack.pop()
         array = self.semantic_stack.pop()
         result = self.get_temp()
-        self.add_code_line(("MULT", index, "#4", result))
+        self.add_code_line(("ADD", index, "#1", result))
+        self.add_code_line(("MULT", result, "#4", result))
         self.add_code_line(("ADD", f"#{array}", result, result))
         self.semantic_stack.append("@" + str(result))
 
