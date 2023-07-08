@@ -8,9 +8,10 @@ class CodeGenerator:
         self.break_stack = list()
 
         self.temp_pointer = 500
-        
+
         self.stack_pointer = 100
-        self.return_value = 104
+        self.return_address = 104
+        self.dummy_address = 108
 
         self.scope_stack = [
             {
@@ -21,14 +22,15 @@ class CodeGenerator:
                 }
             }
         ]
+        self.address_scope_stack = [
+            [],
+        ]
         self.codes_generated = {
             0: ("ASSIGN", "#4000", self.stack_pointer, None),
-            1: ("ASSIGN", "#0", self.return_value, None),
+            1: ("ASSIGN", "#0", self.return_address, None),
         }
-        self.waiting_function_jumps = {
+        self.waiting_function_jumps = {}
 
-        }
-        
         self.program_line = len(self.codes_generated)
 
         self.last_id = None
@@ -46,7 +48,7 @@ class CodeGenerator:
         return -1, None
 
     def add_var_to_scope(self, var, scope_indicator, type, length=1):
-        address = self.get_temp(len=length)
+        address = self.get_temp(length=length)
         self.scope_stack[scope_indicator][var] = dict()
         self.scope_stack[scope_indicator][var]["addr"] = address
         self.scope_stack[scope_indicator][var]["type"] = type
@@ -149,14 +151,14 @@ class CodeGenerator:
             self.push_return_address()
         elif action == "pop_return_address":
             self.pop_return_address()
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
-        elif action == "":
-            pass
+        elif action == "push_state":
+            self.push_state()
+        elif action == "pop_state":
+            self.pop_state()
+        elif action == "return_void":
+            self.return_void()
+        elif action == "return_int":
+            self.return_int()
         elif action == "":
             pass
         elif action == "":
@@ -188,9 +190,11 @@ class CodeGenerator:
         else:
             raise Exception("Invalid action")
 
-    def get_temp(self, len=1, size=4):
+    def get_temp(self, length=1, size=4):
         address = self.temp_pointer
-        self.temp_pointer += len * size
+        self.temp_pointer += length * size
+        for i in range(length):
+            self.address_scope_stack[-1].append(address + i * 4)
         return address
 
     def p_id(self, id):
@@ -325,12 +329,14 @@ class CodeGenerator:
         self.last_id = None
         self.last_type = None
         self.scope_stack.append({})
+        self.address_scope_stack.append([])
 
     def scope_exit(self):
         self.last_num = None
         self.last_id = None
         self.last_type = None
         self.scope_stack.pop()
+        self.address_scope_stack.pop()
 
     def declaring_function(self):
         self.current_function_name = self.last_id
@@ -359,7 +365,8 @@ class CodeGenerator:
         pass
 
     def default_return(self):
-        pass
+        if self.current_function_name != "main":
+            self.add_code_line(("JP", f"@{self.return_address}", None, None))
 
     def declare_array_param(self):
         self.declaring_function_params.append(
@@ -379,11 +386,30 @@ class CodeGenerator:
         )
         self.add_var_to_scope(self.last_id, -1, "int")
 
+    def push_state(self):
+        for address_scope in self.address_scope_stack[-2:]:
+            for addr in address_scope:
+                self.push_to_stack(addr)
+
+    def pop_state(self):
+        for address_scope in reversed(self.address_scope_stack[-2:]):
+            for addr in reversed(address_scope):
+                self.pop_from_stack(addr)
+            
     def push_return_address(self):
-        pass
+        self.push_to_stack(self.program_line + 3)  # TODO: check 3
 
     def pop_return_address(self):
-        pass
+        self.pop_from_stack(self.return_address)
+        
+    def return_void(self):
+        self.push_to_stack("#0")
+        self.add_code_line(("JP", f"@{self.return_address}", None, None))
+
+    def return_int(self):
+        addr = self.semantic_stack.pop()
+        self.push_to_stack(addr)
+        self.add_code_line(("JP", f"@{self.return_address}", None, None))
 
     def function_declared(self):
         self.current_function_name = None

@@ -4,7 +4,7 @@ Declaration ⟶ Declaration-initial Declaration-prime
 Declaration-initial ⟶ Type-specifier ID #p_id
 Declaration-prime ⟶ Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime ⟶ ; #declare_var | [ NUM #p_num ] #declare_array ;
-Fun-declaration-prime ⟶ #declaring_function #scope_enter ( #start_declaring_params Params #end_declaring_params ) #signature_declared #pop_params Compound-stmt #default_return #function_declared #scope_exit
+Fun-declaration-prime ⟶ #declaring_function #scope_enter ( #start_declaring_params Params #end_declaring_params ) #signature_declared #pop_params #pop_return_address Compound-stmt #default_return #function_declared #scope_exit
 Type-specifier ⟶ int | void
 Params ⟶ int ID #p_id Param-prime Param-list | void
 Param-list ⟶ , Param Param-list | EPSILON
@@ -17,7 +17,7 @@ Expression-stmt ⟶ Expression ; #exp_end | break #break ; | ;
 Selection-stmt ⟶ if ( Expression ) #save Statement #jpf_save else Statement #jp
 Iteration-stmt ⟶ repeat #label Statement until ( Expression ) #jp_break #jpf
 Return-stmt ⟶ return Return-stmt-prime
-Return-stmt-prime ⟶ ; | Expression ;
+Return-stmt-prime ⟶ #return_void ; | Expression #return_int ;
 Expression ⟶ Simple-expression-zegond | ID #p_id B
 B ⟶ = Expression #assign | [ Expression #array_index ] H | Simple-expression-prime
 H ⟶ = Expression #assign | G D C
