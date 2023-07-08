@@ -4,12 +4,12 @@ Declaration ⟶ Declaration-initial Declaration-prime
 Declaration-initial ⟶ Type-specifier ID #p_id
 Declaration-prime ⟶ Fun-declaration-prime | Var-declaration-prime
 Var-declaration-prime ⟶ ; #declare_var | [ NUM #p_num ] #declare_array ;
-Fun-declaration-prime ⟶ #scope_enter ( Params ) Compound-stmt #scope_exit
+Fun-declaration-prime ⟶ #declaring_function #scope_enter ( #start_declaring_params Params #end_declaring_params ) #signature_declared #pop_params Compound-stmt #default_return #function_declared #scope_exit
 Type-specifier ⟶ int | void
 Params ⟶ int ID #p_id Param-prime Param-list | void
 Param-list ⟶ , Param Param-list | EPSILON
 Param ⟶ Declaration-initial Param-prime
-Param-prime ⟶ [ ] | EPSILON
+Param-prime ⟶ [ ] #declare_array_param | EPSILON #declare_int_param
 Compound-stmt ⟶ { #scope_enter Declaration-list Statement-list #scope_exit }
 Statement-list ⟶ Statement Statement-list | EPSILON
 Statement ⟶ Expression-stmt | Compound-stmt | Selection-stmt | Iteration-stmt | Return-stmt
