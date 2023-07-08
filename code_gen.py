@@ -368,8 +368,10 @@ class CodeGenerator:
         for address_scope in self.address_scope_stack[-2:]:
             for addr in address_scope:
                 self.push_to_stack(addr)
+        self.push_to_stack(self.return_address)
 
     def pop_state(self):
+        self.pop_from_stack(self.return_address)
         for address_scope in reversed(self.address_scope_stack[-2:]):
             for addr in reversed(address_scope):
                 self.pop_from_stack(addr)
